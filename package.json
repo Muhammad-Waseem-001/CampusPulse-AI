@@ -2,20 +2,18 @@
   "name": "saylani-batch",
   "version": "1.0.0",
   "description": "",
-  "main": "dialogflow.js",
+  "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node dialogflow.js"
+    "start": "node server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@google-cloud/dialogflow": "^7.4.0",
     "@google/generative-ai": "^0.24.1",
     "@supabase/supabase-js": "^2.89.0",
     "cors": "^2.8.5",
-    "dialogflow-fulfillment": "^0.5.0",
     "dotenv": "^17.2.3",
     "express": "^4.22.1",
     "googleapis": "^169.0.0",

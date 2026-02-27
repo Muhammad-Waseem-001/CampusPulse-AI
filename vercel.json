@@ -2,7 +2,11 @@
   "version": 2,
   "routes": [
     {
-      "src": "/webhook",
+      "src": "/(webhook|health)",
+      "dest": "/api/webhook"
+    },
+    {
+      "src": "/api/(.*)",
       "dest": "/api/webhook"
     },
     {

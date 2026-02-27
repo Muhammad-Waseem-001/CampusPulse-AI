@@ -1,47 +1,50 @@
-# Supabase Setup Instructions
+# Student Helpdesk Bot Setup (Kommunicate + Supabase)
 
-## Step 1: Install Dependencies
-The Supabase client library has been added to your `package.json`. Run:
+## 1) Install dependencies
 ```bash
 npm install
 ```
 
-## Step 2: Create Supabase Project
-1. Go to [https://supabase.com](https://supabase.com)
-2. Sign up or log in
-3. Create a new project
-4. Wait for the project to be set up (takes a few minutes)
+## 2) Configure environment variables
+Set these in `.env`:
 
-## Step 3: Get Your Supabase Credentials
-1. In your Supabase project dashboard, go to **Settings** → **API**
-2. Copy your **Project URL** (this is your `SUPABASE_URL`)
-3. Copy your **anon/public key** (this is your `SUPABASE_ANON_KEY`)
-
-## Step 4: Create the Database Table
-1. In your Supabase project, go to **SQL Editor**
-2. Run the SQL script from `supabase_setup.sql` to create the `bookings` table
-
-## Step 5: Set Up Environment Variables
-Create a `.env` file in your project root with the following:
-```
-SUPABASE_URL=your_supabase_project_url_here
-SUPABASE_ANON_KEY=your_supabase_anon_key_here
+```env
 PORT=8080
+BOT_NAME=CampusPulse AI
+BOT_TIMEZONE=Asia/Karachi
+SUPABASE_URL=your_supabase_url
+SUPABASE_ANON_KEY=your_supabase_anon_key
+GOOGLE_SHEET_ID=your_sheet_id
+GOOGLE_SHEET_RANGE=Sheet1!A:G
+GOOGLE_SERVICE_ACCOUNT_KEY_FILE=credentials.json
+SMTP_USER=your_gmail@gmail.com
+SMTP_PASS=your_gmail_app_password
 ```
 
-Replace `your_supabase_project_url_here` and `your_supabase_anon_key_here` with your actual Supabase credentials.
+## 3) Create Supabase tables
+Run `supabase_setup.sql` in Supabase SQL Editor.
 
-## Step 6: Test the Integration
-Once everything is set up, when a booking is made through Dialogflow, the booking details will be automatically saved to your Supabase `bookings` table.
+## 4) Kommunicate integration
+1. Create a Kommunicate AI agent/app.
+2. In Kommunicate, configure custom bot webhook URL:
+   - local: `https://<ngrok-id>.ngrok-free.app/webhook`
+   - deployed: `https://<your-domain>/webhook`
+3. In your widget script, replace `YOUR_KOMMUNICATE_APP_ID` in `index.html`.
+4. Configure Facebook channel from Kommunicate dashboard and link it to the same bot.
 
-## Database Schema
-The `bookings` table has the following structure:
-- `id` - Auto-incrementing primary key
-- `email` - Customer email address
-- `phone` - Customer phone number
-- `arrival` - Arrival location
-- `destination` - Destination location
-- `date` - Booking date
-- `number_of_people` - Number of people
-- `created_at` - Timestamp of when the booking was created
+## 5) Run locally
+```bash
+npm start
+```
+Open `http://localhost:8080`.
 
+## Endpoints
+- `POST /webhook` -> Kommunicate custom bot webhook
+- `POST /api/student-query` -> Manual query collection from frontend form
+- `GET /health` -> Health check
+
+## Notes
+- `student_conversations` stores all bot exchanges.
+- `student_queries` stores unresolved or manually submitted student issues.
+- Query records are also appended to Google Sheets.
+- Confirmation email is sent to student after query logging.

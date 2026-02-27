@@ -1,20 +1,33 @@
--- Create bookings table in Supabase
--- Run this SQL in your Supabase SQL Editor
+-- Supabase SQL setup for Student Helpdesk Bot
 
-CREATE TABLE IF NOT EXISTS bookings (
-  id BIGSERIAL PRIMARY KEY,
-  email VARCHAR(255) NOT NULL,
-  phone VARCHAR(50) NOT NULL,
-  arrival VARCHAR(255) NOT NULL,
-  destination VARCHAR(255) NOT NULL,
-  date VARCHAR(100) NOT NULL,
-  number_of_people INTEGER NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+create table if not exists student_conversations (
+  id bigserial primary key,
+  session_id text not null,
+  source text not null default 'kommunicate',
+  intent_name text,
+  user_message text,
+  bot_response text,
+  course_code text,
+  confidence numeric,
+  created_at timestamp with time zone default now()
 );
 
--- Optional: Create an index on email for faster queries
-CREATE INDEX IF NOT EXISTS idx_bookings_email ON bookings(email);
+create index if not exists idx_student_conversations_created_at
+on student_conversations(created_at desc);
 
--- Optional: Create an index on created_at for sorting
-CREATE INDEX IF NOT EXISTS idx_bookings_created_at ON bookings(created_at DESC);
+create table if not exists student_queries (
+  id bigserial primary key,
+  student_name text not null,
+  student_email text not null,
+  course_code text not null,
+  query_text text not null,
+  source text not null default 'kommunicate',
+  status text not null default 'open',
+  created_at timestamp with time zone default now()
+);
 
+create index if not exists idx_student_queries_status
+on student_queries(status);
+
+create index if not exists idx_student_queries_created_at
+on student_queries(created_at desc);
