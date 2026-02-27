@@ -159,6 +159,27 @@ function firstNonEmpty(...values) {
   return "";
 }
 
+function normalizeKeyName(key) {
+  return normalizeText(key).toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function getValueByAliases(source, aliases) {
+  if (!source || typeof source !== "object") return "";
+
+  const map = new Map();
+  for (const [key, value] of Object.entries(source)) {
+    map.set(normalizeKeyName(key), value);
+  }
+
+  for (const alias of aliases) {
+    const matched = map.get(normalizeKeyName(alias));
+    const normalized = normalizeText(matched);
+    if (normalized) return normalized;
+  }
+
+  return "";
+}
+
 function objectFromKeyValueArray(input) {
   if (!Array.isArray(input)) {
     return input && typeof input === "object" ? input : {};
@@ -279,71 +300,68 @@ function extractPayloadEntityHints(payload = {}) {
     payload.parameters || payload.params || payload.entities || payload.extractedEntities || {}
   );
   const context = objectFromKeyValueArray(payload.context || payload.conversationContext || {});
+  const nlp = objectFromKeyValueArray(payload.nlpResponse || {});
+  const nlpParams = objectFromKeyValueArray(
+    nlp.parameters || nlp.params || nlp.entities || nlp.extractedEntities || {}
+  );
+
+  const scopes = [metadata, params, context, nlpParams, payload, payload.userInfo || {}];
+
+  const pick = (aliases) => firstNonEmpty(...scopes.map((scope) => getValueByAliases(scope, aliases)));
 
   return {
-    student_name: firstNonEmpty(
-      metadata.student_name,
-      params.student_name,
-      params.studentName,
-      params.name,
-      context.student_name,
-      context.studentName,
-      context.name,
-      payload.student_name,
-      payload.studentName,
-      payload.name
-    ),
-    student_email: firstNonEmpty(
-      metadata.student_email,
-      params.student_email,
-      params.studentEmail,
-      params.email,
-      context.student_email,
-      context.studentEmail,
-      context.email,
-      payload.student_email,
-      payload.studentEmail,
-      payload.email
-    ),
-    course_code: firstNonEmpty(
-      metadata.course_code,
-      params.course_code,
-      params.courseCode,
-      params.course,
-      context.course_code,
-      context.courseCode,
-      context.course,
-      payload.course_code,
-      payload.courseCode,
-      payload.course
-    ),
-    query_text: firstNonEmpty(
-      metadata.query_text,
-      params.query_text,
-      params.queryText,
-      params.issue,
-      params.problem,
-      context.query_text,
-      context.queryText,
-      payload.query_text,
-      payload.queryText,
-      payload.issue,
-      payload.problem
-    ),
-    mentor_name: firstNonEmpty(
-      metadata.mentor_name,
-      params.mentor_name,
-      params.mentorName,
-      params.mentor,
-      params.teacher,
-      context.mentor_name,
-      context.mentorName,
-      context.mentor,
-      payload.mentor_name,
-      payload.mentorName,
-      payload.mentor,
-      payload.teacher
-    ),
+    student_name: pick([
+      "student_name",
+      "$student_name",
+      "studentName",
+      "$studentName",
+      "name",
+      "$name",
+      "displayName",
+      "$displayName",
+    ]),
+    student_email: pick([
+      "student_email",
+      "$student_email",
+      "studentEmail",
+      "$studentEmail",
+      "email",
+      "$email",
+      "userEmail",
+      "$userEmail",
+    ]),
+    course_code: pick([
+      "course_code",
+      "$course_code",
+      "courseCode",
+      "$courseCode",
+      "course",
+      "$course",
+    ]),
+    query_text: pick([
+      "query_text",
+      "$query_text",
+      "queryText",
+      "$queryText",
+      "issue",
+      "$issue",
+      "problem",
+      "$problem",
+      "description",
+      "$description",
+      "message",
+      "$message",
+    ]),
+    mentor_name: pick([
+      "mentor_name",
+      "$mentor_name",
+      "mentorName",
+      "$mentorName",
+      "mentor",
+      "$mentor",
+      "teacher",
+      "$teacher",
+    ]),
   };
 }
 
@@ -392,27 +410,40 @@ function detectIntent(message, entities = {}) {
 }
 
 function inferIntentFromPayload(payload, message, entities) {
+  const nlp = objectFromKeyValueArray(payload.nlpResponse || {});
+
   const explicitIntent = firstNonEmpty(
     payload.intentName,
     payload.intent,
     payload.action,
     payload.botIntent,
+    payload.matchedIntent,
+    payload.matchedIntentName,
     payload?.metadata?.intentName,
     payload?.metadata?.intent,
     payload?.payload?.intentName,
-    payload?.payload?.intent
+    payload?.payload?.intent,
+    nlp.intent,
+    nlp.intentName,
+    nlp.matchedIntent,
+    nlp.matchedIntentName
   ).toLowerCase();
 
   if (explicitIntent.includes("welcome")) return "welcome_student";
   if (explicitIntent.includes("course")) return "course_info";
-  if (explicitIntent.includes("mentor") || explicitIntent.includes("teacher") || explicitIntent.includes("faculty")) {
+  if (
+    explicitIntent.includes("mentor") ||
+    explicitIntent.includes("teacher") ||
+    explicitIntent.includes("faculty")
+  ) {
     return "mentor_info";
   }
   if (
     explicitIntent.includes("submit") ||
     explicitIntent.includes("query") ||
     explicitIntent.includes("ticket") ||
-    explicitIntent.includes("support")
+    explicitIntent.includes("support") ||
+    explicitIntent.includes("complaint")
   ) {
     return "submit_student_query";
   }
@@ -707,6 +738,8 @@ app.post("/webhook", async (req, res) => {
 
   if (DEBUG_WEBHOOK) {
     console.log("[WEBHOOK] Payload keys:", Object.keys(payload));
+    console.log("[WEBHOOK] Raw intent markers:", { matchedIntent: payload.matchedIntent, matchedIntentName: payload.matchedIntentName, eventName: payload.eventName });
+    console.log("[WEBHOOK] Hints:", payloadHints);
     console.log("[WEBHOOK] Incoming:", { incomingMessage, intentName, sessionId, entities });
   }
 
